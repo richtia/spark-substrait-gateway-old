@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """A PySpark client that can send sample queries to the gateway."""
 import atexit
+import os
 from pathlib import Path
 
 from pyspark.sql import SparkSession
@@ -10,12 +11,16 @@ from pyspark.sql.pandas.types import from_arrow_schema
 from gateway.demo.mystream_database import create_mystream_database, delete_mystream_database
 from gateway.demo.mystream_database import get_mystream_schema
 
+import adbc_driver_sqlite.dbapi
+import pyarrow.parquet as pq
+
 
 # pylint: disable=fixme
 def execute_query(spark_session: SparkSession) -> None:
     """Runs a single sample query against the gateway."""
     users_location = str(Path('users.parquet').absolute())
-    schema_users = get_mystream_schema('users')
+    table = pq.read_table(users_location)
+    schema_users = table.schema
 
     df_users = spark_session.read.format('parquet') \
         .schema(from_arrow_schema(schema_users)) \
