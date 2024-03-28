@@ -1,18 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """A PySpark client that can send sample queries to the gateway."""
 import atexit
-import os
 from pathlib import Path
 
+import pyarrow.parquet as pq
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from pyspark.sql.pandas.types import from_arrow_schema
 
 from gateway.demo.mystream_database import create_mystream_database, delete_mystream_database
-from gateway.demo.mystream_database import get_mystream_schema
-
-import adbc_driver_sqlite.dbapi
-import pyarrow.parquet as pq
 
 
 # pylint: disable=fixme
