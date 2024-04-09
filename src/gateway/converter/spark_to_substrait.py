@@ -25,13 +25,17 @@ from gateway.converter.substrait_builder import field_reference, cast_operation,
 from gateway.converter.symbol_table import SymbolTable
 
 
+DUCKDB_TABLE = "duckdb_table"
+
+
 def fetch_schema_with_adbc(path):
     """Fetch the arrow schema via ADBC."""
 
     with adbc_driver_duckdb.dbapi.connect() as conn, conn.cursor() as cur:
+        # TODO: Support multiple paths.
         reader = pyarrow.parquet.ParquetFile(path)
-        cur.adbc_ingest("duckdb_table", reader.iter_batches(), mode="create")
-        schema = conn.adbc_get_table_schema("duckdb_table")
+        cur.adbc_ingest(DUCKDB_TABLE, reader.iter_batches(), mode="create")
+        schema = conn.adbc_get_table_schema(DUCKDB_TABLE)
         return schema
 
 
@@ -346,7 +350,7 @@ class SparkSubstraitConverter:
             schema.struct.types.append(field_type)
         return schema
 
-    def convert_arrow_schema(self, arrow_schema: pyarrow.Schema) -> Optional[type_pb2.NamedStruct]:
+    def convert_arrow_schema(self, arrow_schema: pyarrow.Schema) -> type_pb2.NamedStruct:
         schema = type_pb2.NamedStruct()
         schema.struct.nullability = type_pb2.Type.NULLABILITY_REQUIRED
 
@@ -378,7 +382,7 @@ class SparkSubstraitConverter:
     def convert_read_data_source_relation(self, rel: spark_relations_pb2.Read) -> algebra_pb2.Rel:
         """Converts a read data source relation into a Substrait relation."""
         local = algebra_pb2.ReadRel.LocalFiles()
-        schema = self.convert_schema(rel.schema) #schema is a NamedStruct.  convert_schema converts the schema string to a NamedStruct.
+        schema = self.convert_schema(rel.schema)
         if not schema:
             path = rel.paths[0]
             arrow_schema = fetch_schema_with_adbc(path)

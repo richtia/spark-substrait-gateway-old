@@ -126,11 +126,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
 
     def AnalyzePlan(self, request, context):
         _LOGGER.info('AnalyzePlan: %s', request)
-        path = request.schema.plan.root.read.data_source.paths[0]
-        schema = fetch_schema_with_adbc(path)
-        spark_schema = convert_pyarrow_schema_to_spark(schema)
-        result = pb2.AnalyzePlanResponse(session_id=request.session_id, schema=pb2.AnalyzePlanResponse.Schema(schema=spark_schema))
-        return result
+        return pb2.AnalyzePlanResponse(session_id=request.session_id)
 
     def Config(self, request, context):
         _LOGGER.info('Config: %s', request)
