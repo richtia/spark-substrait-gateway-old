@@ -13,7 +13,7 @@ USE_GATEWAY = True
 # pylint: disable=fixme
 def future_get_customer_database(spark_session: SparkSession) -> DataFrame:
     # TODO -- Use this when server-side schema evaluation is available.
-    location_customer = str(Path('../../third_party/tpch/parquet/customer').absolute())
+    location_customer = str(Path('../../../third_party/tpch/parquet/customer/part-0.parquet').absolute())
 
     return spark_session.read.parquet(location_customer,
                                       mergeSchema=False)
