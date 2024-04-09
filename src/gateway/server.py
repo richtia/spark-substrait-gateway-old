@@ -13,7 +13,6 @@ from pyspark.sql.connect.proto import types_pb2
 
 from gateway.converter.conversion_options import duck_db, datafusion
 from gateway.converter.spark_to_substrait import SparkSubstraitConverter
-from gateway.converter.spark_to_substrait import fetch_schema_with_adbc
 from gateway.adbc.backend import AdbcBackend
 from gateway.converter.sql_to_substrait import SqlConverter
 
