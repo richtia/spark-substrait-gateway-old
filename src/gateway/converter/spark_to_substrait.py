@@ -6,6 +6,7 @@ from typing import Dict, Optional, List
 
 import adbc_driver_duckdb.dbapi
 import pyarrow
+import pyarrow.parquet
 import pyspark.sql.connect.proto.base_pb2 as spark_pb2
 import pyspark.sql.connect.proto.expressions_pb2 as spark_exprs_pb2
 import pyspark.sql.connect.proto.relations_pb2 as spark_relations_pb2
@@ -36,7 +37,8 @@ def fetch_schema_with_adbc(path):
         reader = pyarrow.parquet.ParquetFile(path)
         cur.adbc_ingest(DUCKDB_TABLE, reader.iter_batches(), mode="create")
         schema = conn.adbc_get_table_schema(DUCKDB_TABLE)
-        return schema
+
+    return schema
 
 
 # pylint: disable=E1101,fixme,too-many-public-methods
