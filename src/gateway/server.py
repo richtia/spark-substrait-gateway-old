@@ -13,6 +13,7 @@ from pyspark.sql.connect.proto import types_pb2
 
 from gateway.converter.conversion_options import duck_db, datafusion
 from gateway.converter.spark_to_substrait import SparkSubstraitConverter
+from gateway.converter.spark_to_substrait import fetch_schema_with_adbc
 from gateway.adbc.backend import AdbcBackend
 from gateway.converter.sql_to_substrait import SqlConverter
 
@@ -125,7 +126,11 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
 
     def AnalyzePlan(self, request, context):
         _LOGGER.info('AnalyzePlan: %s', request)
-        return pb2.AnalyzePlanResponse(session_id=request.session_id)
+        path = request.schema.plan.root.read.data_source.paths[0]
+        schema = fetch_schema_with_adbc(path)
+        spark_schema = convert_pyarrow_schema_to_spark(schema)
+        result = pb2.AnalyzePlanResponse(session_id=request.session_id, schema=pb2.AnalyzePlanResponse.Schema(schema=spark_schema))
+        return result
 
     def Config(self, request, context):
         _LOGGER.info('Config: %s', request)
