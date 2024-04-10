@@ -38,7 +38,6 @@ def fetch_schema_with_adbc(path):
         cur.adbc_ingest(DUCKDB_TABLE, reader.iter_batches(), mode="create")
         schema = conn.adbc_get_table_schema(DUCKDB_TABLE)
         cur.execute(f"DROP TABLE {DUCKDB_TABLE}")
-    conn.close()
 
     return schema
 
