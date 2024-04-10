@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Routines to convert SparkConnect plans to Substrait plans."""
+import glob
 import json
 import operator
+import pathlib
 from typing import Dict, Optional, List
 
 import adbc_driver_duckdb.dbapi
@@ -25,16 +27,21 @@ from gateway.converter.substrait_builder import field_reference, cast_operation,
     if_then_else_operation, greater_function, minus_function
 from gateway.converter.symbol_table import SymbolTable
 
-
 DUCKDB_TABLE = "duckdb_table"
 
 
 def fetch_schema_with_adbc(path):
     """Fetch the arrow schema via ADBC."""
 
+    p = pathlib.Path(path)
+    folder = p.parent
+    file_paths = [str(folder / pathlib.Path(x)) for x in glob.glob(path)]
+    file_paths.sort() # We sort the files because the later partitions don't have enough data to construct a schema.
+    file_path = file_paths[0]
+
     with adbc_driver_duckdb.dbapi.connect() as conn, conn.cursor() as cur:
         # TODO: Support multiple paths.
-        reader = pyarrow.parquet.ParquetFile(path)
+        reader = pyarrow.parquet.ParquetFile(file_path)
         cur.adbc_ingest(DUCKDB_TABLE, reader.iter_batches(), mode="create")
         schema = conn.adbc_get_table_schema(DUCKDB_TABLE)
         cur.execute(f"DROP TABLE {DUCKDB_TABLE}")
