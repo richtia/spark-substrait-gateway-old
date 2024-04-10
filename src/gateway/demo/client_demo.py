@@ -10,7 +10,7 @@ USE_GATEWAY = True
 
 # pylint: disable=fixme
 def get_customer_database(spark_session: SparkSession) -> DataFrame:
-    location_customer = str(Path('../../../third_party/tpch/parquet/customer').absolute())
+    location_customer = str(Path('../../../third_party/tpch/parquet/customer').resolve())
 
     return spark_session.read.parquet(location_customer,
                                       mergeSchema=False)
