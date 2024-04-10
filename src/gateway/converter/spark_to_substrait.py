@@ -30,7 +30,7 @@ from gateway.converter.symbol_table import SymbolTable
 DUCKDB_TABLE = "duckdb_table"
 
 
-def fetch_schema_with_adbc(file_path, ext) -> pyarrow.Schema:
+def fetch_schema_with_adbc(file_path: str, ext: str) -> pyarrow.Schema:
     """Fetch the arrow schema via ADBC."""
 
     file_paths = list(pathlib.Path(file_path).glob(f'*.{ext}'))
