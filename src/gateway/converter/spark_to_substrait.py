@@ -30,14 +30,16 @@ from gateway.converter.symbol_table import SymbolTable
 DUCKDB_TABLE = "duckdb_table"
 
 
-def fetch_schema_with_adbc(path):
+def fetch_schema_with_adbc(read_relation: spark_relations_pb2.Read) -> pyarrow.Schema:
     """Fetch the arrow schema via ADBC."""
 
-    p = pathlib.Path(path)
-    folder = p.parent
-    file_paths = [str(folder / pathlib.Path(x)) for x in glob.glob(path)]
-    file_paths.sort() # We sort the files because the later partitions don't have enough data to construct a schema.
-    file_path = file_paths[0]
+    file_path = read_relation.paths[0]
+    ext = read_relation.format
+    file_paths = list(pathlib.Path(file_path).glob(f'*.{ext}'))
+    if len(file_paths) > 0:
+        # We sort the files because the later partitions don't have enough data to construct a schema.
+        file_paths = sorted([str(fp) for fp in file_paths])
+        file_path = file_paths[0]
 
     with adbc_driver_duckdb.dbapi.connect() as conn, conn.cursor() as cur:
         # TODO: Support multiple paths.
@@ -398,8 +400,7 @@ class SparkSubstraitConverter:
         local = algebra_pb2.ReadRel.LocalFiles()
         schema = self.convert_schema(rel.schema)
         if not schema:
-            path = rel.paths[0]
-            arrow_schema = fetch_schema_with_adbc(path)
+            arrow_schema = fetch_schema_with_adbc(rel)
             schema = self.convert_arrow_schema(arrow_schema)
         symbol = self._symbol_table.get_symbol(self._current_plan_id)
         for field_name in schema.names:
@@ -409,7 +410,11 @@ class SparkSubstraitConverter:
                 read=algebra_pb2.ReadRel(base_schema=schema,
                                          named_table=algebra_pb2.ReadRel.NamedTable(
                                              names=['demotable'])))
-        for path in rel.paths:
+        if pathlib.Path(rel.paths[0]).is_dir():
+            file_paths = glob.glob(f'{rel.paths[0]}/*{rel.format}')
+        else:
+            file_paths = rel.paths
+        for path in file_paths:
             uri_path = path
             if self._conversion_options.needs_scheme_in_path_uris:
                 if uri_path.startswith('/'):

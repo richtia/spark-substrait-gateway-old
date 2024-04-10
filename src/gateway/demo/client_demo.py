@@ -12,7 +12,7 @@ USE_GATEWAY = True
 def get_customer_database(spark_session: SparkSession) -> DataFrame:
     location_customer = str(Path('../../../third_party/tpch/parquet/customer').absolute())
 
-    return spark_session.read.parquet(location_customer + '/*.parquet',
+    return spark_session.read.parquet(location_customer,
                                       mergeSchema=False)
 
 
