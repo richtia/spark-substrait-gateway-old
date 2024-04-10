@@ -30,11 +30,9 @@ from gateway.converter.symbol_table import SymbolTable
 DUCKDB_TABLE = "duckdb_table"
 
 
-def fetch_schema_with_adbc(read_relation: spark_relations_pb2.Read) -> pyarrow.Schema:
+def fetch_schema_with_adbc(file_path, ext) -> pyarrow.Schema:
     """Fetch the arrow schema via ADBC."""
 
-    file_path = read_relation.paths[0]
-    ext = read_relation.format
     file_paths = list(pathlib.Path(file_path).glob(f'*.{ext}'))
     if len(file_paths) > 0:
         # We sort the files because the later partitions don't have enough data to construct a schema.
@@ -400,7 +398,7 @@ class SparkSubstraitConverter:
         local = algebra_pb2.ReadRel.LocalFiles()
         schema = self.convert_schema(rel.schema)
         if not schema:
-            arrow_schema = fetch_schema_with_adbc(rel)
+            arrow_schema = fetch_schema_with_adbc(rel.paths[0], rel.format)
             schema = self.convert_arrow_schema(arrow_schema)
         symbol = self._symbol_table.get_symbol(self._current_plan_id)
         for field_name in schema.names:
