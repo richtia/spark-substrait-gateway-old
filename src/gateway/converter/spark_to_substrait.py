@@ -55,13 +55,12 @@ def fetch_schema_with_adbc(file_path: str, ext: str, options: BackendOptions) ->
 
     driver, entry_point = get_backend_driver(options)
 
-    with dbapi.connect(driver=driver, entrypoint=entry_point) as conn:
-        with conn.cursor() as cur:
-            # TODO: Support multiple paths.
-            reader = pyarrow.parquet.ParquetFile(file_path)
-            cur.adbc_ingest(TABLE_NAME, reader.iter_batches(), mode="create")
-            schema = conn.adbc_get_table_schema(TABLE_NAME)
-            cur.execute(f"DROP TABLE {TABLE_NAME}")
+    with dbapi.connect(driver=driver, entrypoint=entry_point) as conn, conn.cursor() as cur:
+        # TODO: Support multiple paths.
+        reader = pyarrow.parquet.ParquetFile(file_path)
+        cur.adbc_ingest(TABLE_NAME, reader.iter_batches(), mode="create")
+        schema = conn.adbc_get_table_schema(TABLE_NAME)
+        cur.execute(f"DROP TABLE {TABLE_NAME}")
 
     return schema
 
