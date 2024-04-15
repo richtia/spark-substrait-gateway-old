@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Routines to convert SparkConnect plans to Substrait plans."""
-import duckdb
 import glob
 import json
 import operator
 import pathlib
 from typing import Dict, Optional, List
 
+import duckdb
 import pyarrow
 import pyarrow.parquet
 import pyspark.sql.connect.proto.base_pb2 as spark_pb2
@@ -19,6 +19,7 @@ from substrait.gen.proto import plan_pb2
 from substrait.gen.proto import type_pb2
 from substrait.gen.proto.extensions import extensions_pb2
 
+from gateway.adbc.backend_options import BackendOptions, Backend
 from gateway.converter.conversion_options import ConversionOptions
 from gateway.converter.spark_functions import ExtensionFunction, lookup_spark_function
 from gateway.converter.sql_to_substrait import convert_sql
@@ -32,20 +33,27 @@ from gateway.converter.symbol_table import SymbolTable
 TABLE_NAME = "my_table"
 
 
-def fetch_schema_with_adbc(file_path: str, ext: str, backend: str) -> pyarrow.Schema:
-    """Fetch the arrow schema via ADBC."""
-    match backend:
-        case "DUCKDB":
+def get_backend_driver(options: BackendOptions) -> tuple[str, str]:
+    match options.backend:
+        case Backend.DUCKDB:
             driver = duckdb.duckdb.__file__
             entry_point = "duckdb_adbc_init"
         case _:
-            raise ValueError(f'Unknown backend type: {backend}')
+            raise ValueError(f'Unknown backend type: {options.backend}')
+
+    return driver, entry_point
+
+
+def fetch_schema_with_adbc(file_path: str, ext: str, options: BackendOptions) -> pyarrow.Schema:
+    """Fetch the arrow schema via ADBC."""
 
     file_paths = list(pathlib.Path(file_path).glob(f'*.{ext}'))
     if len(file_paths) > 0:
         # We sort the files because the later partitions don't have enough data to construct a schema.
         file_paths = sorted([str(fp) for fp in file_paths])
         file_path = file_paths[0]
+
+    driver, entry_point = get_backend_driver(options)
 
     with dbapi.connect(driver=driver, entrypoint=entry_point) as conn:
         with conn.cursor() as cur:
@@ -408,9 +416,8 @@ class SparkSubstraitConverter:
         """Converts a read data source relation into a Substrait relation."""
         local = algebra_pb2.ReadRel.LocalFiles()
         schema = self.convert_schema(rel.schema)
-        backend = self._conversion_options.backend.backend.name
         if not schema:
-            arrow_schema = fetch_schema_with_adbc(rel.paths[0], rel.format, backend)
+            arrow_schema = fetch_schema_with_adbc(rel.paths[0], rel.format, self._conversion_options.backend)
             schema = self.convert_arrow_schema(arrow_schema)
         symbol = self._symbol_table.get_symbol(self._current_plan_id)
         for field_name in schema.names:
