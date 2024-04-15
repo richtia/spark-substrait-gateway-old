@@ -34,6 +34,7 @@ TABLE_NAME = "my_table"
 
 
 def get_backend_driver(options: BackendOptions) -> tuple[str, str]:
+    """Gets the driver and entry point for the specified backend."""
     match options.backend:
         case Backend.DUCKDB:
             driver = duckdb.duckdb.__file__
