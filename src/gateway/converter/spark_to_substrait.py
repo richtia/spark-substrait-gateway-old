@@ -1,18 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 """Routines to convert SparkConnect plans to Substrait plans."""
+import duckdb
 import glob
 import json
 import operator
 import pathlib
 from typing import Dict, Optional, List
 
-import adbc_driver_duckdb.dbapi
 import pyarrow
 import pyarrow.parquet
 import pyspark.sql.connect.proto.base_pb2 as spark_pb2
 import pyspark.sql.connect.proto.expressions_pb2 as spark_exprs_pb2
 import pyspark.sql.connect.proto.relations_pb2 as spark_relations_pb2
 import pyspark.sql.connect.proto.types_pb2 as spark_types_pb2
+from adbc_driver_manager import dbapi
 from substrait.gen.proto import algebra_pb2
 from substrait.gen.proto import plan_pb2
 from substrait.gen.proto import type_pb2
@@ -28,11 +29,17 @@ from gateway.converter.substrait_builder import field_reference, cast_operation,
     if_then_else_operation, greater_function, minus_function
 from gateway.converter.symbol_table import SymbolTable
 
-DUCKDB_TABLE = "duckdb_table"
+TABLE_NAME = "my_table"
 
 
-def fetch_schema_with_adbc(file_path: str, ext: str) -> pyarrow.Schema:
+def fetch_schema_with_adbc(file_path: str, ext: str, backend: str) -> pyarrow.Schema:
     """Fetch the arrow schema via ADBC."""
+    match backend:
+        case "DUCKDB":
+            driver = duckdb.duckdb.__file__
+            entry_point = "duckdb_adbc_init"
+        case _:
+            raise ValueError(f'Unknown backend type: {backend}')
 
     file_paths = list(pathlib.Path(file_path).glob(f'*.{ext}'))
     if len(file_paths) > 0:
@@ -40,12 +47,13 @@ def fetch_schema_with_adbc(file_path: str, ext: str) -> pyarrow.Schema:
         file_paths = sorted([str(fp) for fp in file_paths])
         file_path = file_paths[0]
 
-    with adbc_driver_duckdb.dbapi.connect() as conn, conn.cursor() as cur:
-        # TODO: Support multiple paths.
-        reader = pyarrow.parquet.ParquetFile(file_path)
-        cur.adbc_ingest(DUCKDB_TABLE, reader.iter_batches(), mode="create")
-        schema = conn.adbc_get_table_schema(DUCKDB_TABLE)
-        cur.execute(f"DROP TABLE {DUCKDB_TABLE}")
+    with dbapi.connect(driver=driver, entrypoint=entry_point) as conn:
+        with conn.cursor() as cur:
+            # TODO: Support multiple paths.
+            reader = pyarrow.parquet.ParquetFile(file_path)
+            cur.adbc_ingest(TABLE_NAME, reader.iter_batches(), mode="create")
+            schema = conn.adbc_get_table_schema(TABLE_NAME)
+            cur.execute(f"DROP TABLE {TABLE_NAME}")
 
     return schema
 
@@ -400,8 +408,9 @@ class SparkSubstraitConverter:
         """Converts a read data source relation into a Substrait relation."""
         local = algebra_pb2.ReadRel.LocalFiles()
         schema = self.convert_schema(rel.schema)
+        backend = self._conversion_options.backend.backend.name
         if not schema:
-            arrow_schema = fetch_schema_with_adbc(rel.paths[0], rel.format)
+            arrow_schema = fetch_schema_with_adbc(rel.paths[0], rel.format, backend)
             schema = self.convert_arrow_schema(arrow_schema)
         symbol = self._symbol_table.get_symbol(self._current_plan_id)
         for field_name in schema.names:
