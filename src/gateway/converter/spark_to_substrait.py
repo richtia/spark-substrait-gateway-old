@@ -11,6 +11,7 @@ import pyspark.sql.connect.proto.expressions_pb2 as spark_exprs_pb2
 import pyspark.sql.connect.proto.relations_pb2 as spark_relations_pb2
 import pyspark.sql.connect.proto.types_pb2 as spark_types_pb2
 from gateway.backends.backend_options import BackendOptions
+from gateway.backends.backend_options import Backend as backend_engine
 from gateway.backends.backend_selector import find_backend
 from gateway.converter.conversion_options import ConversionOptions
 from gateway.converter.spark_functions import ExtensionFunction, lookup_spark_function
@@ -311,9 +312,19 @@ class SparkSubstraitConverter:
         func.output_type.CopyFrom(function.output_type)
         return func
 
-    def convert_read_named_table_relation(self, rel: spark_relations_pb2.Read) -> algebra_pb2.Rel:
-        """Convert a read named table relation to a Substrait relation."""
-        raise NotImplementedError('named tables are not yet implemented')
+    def convert_read_named_table_relation(self, rel: spark_relations_pb2.Read.named_table) -> algebra_pb2.Rel:
+        """Converts a read named table relation to a Substrait relation."""
+        table_name = rel.unparsed_identifier
+
+        backend = find_backend(BackendOptions(backend_engine.DUCKDB, True))
+        backend.register_tpch()
+        arrow_schema = backend.describe_table(table_name)
+        schema = self.convert_arrow_schema(arrow_schema)
+
+        return algebra_pb2.Rel(
+            read=algebra_pb2.ReadRel(
+                base_schema=schema,
+                named_table=algebra_pb2.ReadRel.NamedTable(names=[table_name])))
 
     def convert_schema(self, schema_str: str) -> type_pb2.NamedStruct | None:
         """Convert the Spark JSON schema string into a Substrait named type structure."""
