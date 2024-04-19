@@ -21,6 +21,7 @@ def get_customer_database(spark_session: SparkSession) -> DataFrame:
 def execute_query(spark_session: SparkSession) -> None:
     """Run a single sample query against the gateway."""
     df_customer = get_customer_database(spark_session)
+
     # TODO -- Enable after named table registration is implemented.
     # df_customer.createOrReplaceTempView('customer')
 
@@ -32,8 +33,9 @@ def execute_query(spark_session: SparkSession) -> None:
 
     df_result.show()
 
-    name = 'customer'
-    spark_session.read.table(name).show()
+    sql_results = spark_session.sql(
+        'SELECT c_custkey, c_phone, c_mktsegment FROM customer LIMIT 5').collect()
+    print(sql_results)
 
 
 if __name__ == '__main__':
