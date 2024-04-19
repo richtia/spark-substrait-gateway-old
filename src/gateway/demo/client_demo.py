@@ -32,24 +32,8 @@ def execute_query(spark_session: SparkSession) -> None:
 
     df_result.show()
 
-
-    # named table example
-    # Start spark only #########
-    # name = 'customer'
-    # location = Backend.find_tpch() / name
-    # spark_session.sql(
-    #     f'CREATE OR REPLACE TEMPORARY VIEW {name} USING org.apache.spark.sql.parquet '
-    #     f'OPTIONS ( path "{location}" )')
-    # spark_session.sql(
-    #         'SELECT c_custkey, c_phone, c_mktsegment FROM customer LIMIT 5').show()
-    #
-    # spark_session.read.table(name).show()
-    # End spark only ###########
-
-
     name = 'customer'
     spark_session.read.table(name).show()
-
 
 
 if __name__ == '__main__':
