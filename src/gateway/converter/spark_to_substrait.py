@@ -322,6 +322,10 @@ class SparkSubstraitConverter:
         arrow_schema = backend.describe_table(table_name)
         schema = self.convert_arrow_schema(arrow_schema)
 
+        symbol = self._symbol_table.get_symbol(self._current_plan_id)
+        for field_name in schema.names:
+            symbol.output_fields.append(field_name)
+
         return algebra_pb2.Rel(
             read=algebra_pb2.ReadRel(
                 base_schema=schema,
