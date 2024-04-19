@@ -312,8 +312,11 @@ class SparkSubstraitConverter:
         func.output_type.CopyFrom(function.output_type)
         return func
 
-    def convert_read_named_table_relation(self, rel: spark_relations_pb2.Read.named_table) -> algebra_pb2.Rel:
-        """Converts a read named table relation to a Substrait relation."""
+    def convert_read_named_table_relation(
+            self,
+            rel: spark_relations_pb2.Read.named_table
+    ) -> algebra_pb2.Rel:
+        """Convert a read named table relation to a Substrait relation."""
         table_name = rel.unparsed_identifier
 
         backend = find_backend(BackendOptions(self._conversion_options.backend.backend, True))
