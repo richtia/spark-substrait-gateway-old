@@ -1150,10 +1150,12 @@ class SparkSubstraitConverter:
         path = read_data_source_relation.paths[0]
         if rel.command.create_dataframe_view.replace:
             mode = 'replace'
+        else:
+            mode = 'create'
 
         backend = find_backend(BackendOptions(self._conversion_options.backend.backend, False))
-        backend.register_table(dataframe_view_name, path, format)
+        backend.register_table(dataframe_view_name, path, format, mode)
         self._backend_with_tempview = backend
-        self._tempview_session_id == session_id
+        self._tempview_session_id = session_id
 
         return backend
