@@ -5,7 +5,7 @@ from gateway.backends.backend_options import Backend, BackendOptions
 from substrait.gen.proto import plan_pb2
 
 
-def convert_sql(sql: str, backend) -> plan_pb2.Plan:
+def convert_sql(sql: str, backend=None) -> plan_pb2.Plan:
     """Convert SQL into a Substrait plan."""
     result = plan_pb2.Plan()
 
