@@ -88,6 +88,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         """Initialize the SparkConnect service."""
         # This is the central point for configuring the behavior of the service.
         self._options = duck_db()
+        self._backend_with_tempview = None
 
     def ExecutePlan(
             self, request: pb2.ExecutePlanRequest, context: grpc.RpcContext) -> Generator[
@@ -101,15 +102,22 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
-                        substrait = convert_sql(request.plan.command.sql_command.sql)
+                        substrait = convert_sql(request.plan.command.sql_command.sql, self._backend_with_tempview)
+                    case 'create_dataframe_view':
+                        convert = SparkSubstraitConverter(self._options)
+                        self._backend_with_tempview = convert.convert_create_dataframe_view(request.plan)
+                        return
                     case _:
                         type = request.plan.command.WhichOneof("command_type")
                         raise NotImplementedError(f'Unsupported command type: {type}')
             case _:
                 raise ValueError(f'Unknown plan type: {request.plan}')
         _LOGGER.debug('  as Substrait: %s', substrait)
-        backend = find_backend(self._options.backend)
-        backend.register_tpch()
+        if self._backend_with_tempview:
+            backend = self._backend_with_tempview
+        else:
+            backend = find_backend(self._options.backend)
+            backend.register_tpch()
         results = backend.execute(substrait)
         _LOGGER.debug('  results are: %s', results)
 

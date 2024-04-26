@@ -5,12 +5,13 @@ from gateway.backends.backend_options import Backend, BackendOptions
 from substrait.gen.proto import plan_pb2
 
 
-def convert_sql(sql: str) -> plan_pb2.Plan:
+def convert_sql(sql: str, backend) -> plan_pb2.Plan:
     """Convert SQL into a Substrait plan."""
     result = plan_pb2.Plan()
 
-    backend = backend_selector.find_backend(BackendOptions(Backend.DUCKDB, False))
-    backend.register_tpch()
+    if not backend:
+        backend = backend_selector.find_backend(BackendOptions(Backend.DUCKDB, False))
+        backend.register_tpch()
 
     connection = backend.get_connection()
     proto_bytes = connection.get_substrait(query=sql).fetchone()[0]

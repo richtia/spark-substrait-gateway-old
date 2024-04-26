@@ -1139,3 +1139,19 @@ class SparkSubstraitConverter:
         result.extension_uris.extend(self._saved_extension_uris)
         result.extensions.extend(self._saved_extensions)
         return result
+
+    def convert_create_dataframe_view(self, rel: spark_pb2.Plan) -> algebra_pb2.Rel:
+        """Convert a create dataframe view relation into a Substrait plan."""
+        dataframe_view_name = rel.command.create_dataframe_view.name
+        read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
+        format = read_data_source_relation.format
+        path = read_data_source_relation.paths[0]
+        if rel.command.create_dataframe_view.replace == True:
+            mode = "replace"
+        else:
+            mode = "create"
+
+        backend = find_backend(BackendOptions(self._conversion_options.backend.backend, False))
+        backend.register_table(dataframe_view_name, path, format)
+
+        return backend

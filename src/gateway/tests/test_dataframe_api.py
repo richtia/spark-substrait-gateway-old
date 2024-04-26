@@ -133,3 +133,9 @@ only showing top 1 row
         customer_dataframe = spark_session_with_customer_dataset.table('customer')
         outcome = customer_dataframe.filter(col('c_mktsegment') == 'FURNITURE').collect()
         assert len(outcome) == 29968
+
+    def test_create_or_replace_temp_view(self, spark_session_with_customer_dataset):
+        df_customer = spark_session_with_customer_dataset.table('customer')
+        df_customer.createOrReplaceTempView("mytempview")
+        df_temp_view = spark_session_with_customer_dataset.sql("SELECT * FROM mytempview")
+        assert df_temp_view.collect() == df_customer.collect()
