@@ -23,6 +23,7 @@ class DatafusionBackend(Backend):
     def create_connection(self) -> None:
         """Create a connection to the backend."""
         import datafusion
+
         self._connection = datafusion.SessionContext()
 
     def execute(self, plan: plan_pb2.Plan) -> pa.lib.Table:
@@ -42,7 +43,9 @@ class DatafusionBackend(Backend):
 
         try:
             plan_data = plan.SerializeToString()
-            substrait_plan = datafusion.substrait.substrait.serde.deserialize_bytes(plan_data)
+            substrait_plan = datafusion.substrait.substrait.serde.deserialize_bytes(
+                plan_data
+            )
             logical_plan = datafusion.substrait.substrait.consumer.from_substrait_plan(
                 self._connection, substrait_plan
             )
@@ -59,7 +62,9 @@ class DatafusionBackend(Backend):
             for table_name in registered_tables:
                 self._connection.deregister_table(table_name)
 
-    def register_table(self, name: str, path: Path, file_format: str = 'parquet') -> None:
+    def register_table(
+        self, name: str, path: Path, file_format: str = "parquet", mode: str = "create"
+    ) -> None:
         """Register the given table with the backend."""
         files = Backend.expand_location(path)
         self._connection.register_parquet(name, files[0])

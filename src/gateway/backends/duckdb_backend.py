@@ -44,7 +44,13 @@ class DuckDBBackend(Backend):
         df = query_result.df()
         return pa.Table.from_pandas(df=df)
 
-    def register_table(self, table_name: str, location: Path, file_format: str = 'parquet') -> None:
+    def register_table(
+        self,
+        table_name: str,
+        location: Path,
+        file_format: str = "parquet",
+        mode: str = "create",
+    ) -> None:
         """Register the given table with the backend."""
         files = Backend.expand_location(location)
         if not files:

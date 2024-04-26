@@ -54,7 +54,9 @@ class AdbcBackend(Backend):
             res = cur.adbc_statement.execute_query()
             return _import(res[0]).read_all()
 
-    def register_table(self, name: str, path: Path, file_format: str = 'parquet') -> None:
+    def register_table(
+            self, name: str, path: Path, file_format: str = 'parquet', mode: str = 'create'
+    ) -> None:
         """Register the given table with the backend."""
         file_paths = sorted(Path(path).glob(f'*.{file_format}'))
         if len(file_paths) > 0:
@@ -62,7 +64,7 @@ class AdbcBackend(Backend):
             file_paths = sorted([str(fp) for fp in file_paths])
             # TODO: Support multiple paths.
             reader = pq.ParquetFile(file_paths[0])
-            self._connection.cursor().adbc_ingest(name, reader.iter_batches(), mode="create")
+            self._connection.cursor().adbc_ingest(name, reader.iter_batches(), mode=mode)
 
     def describe_table(self, table_name: str):
         """Asks the backend to describe the given table."""
