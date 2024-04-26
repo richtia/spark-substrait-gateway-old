@@ -1140,8 +1140,8 @@ class SparkSubstraitConverter:
         result.extensions.extend(self._saved_extensions)
         return result
 
-    def convert_create_dataframe_view(self, rel: spark_pb2.Plan) -> algebra_pb2.Rel:
-        """Convert a create dataframe view relation into a Substrait plan."""
+    def create_dataframe_view(self, rel: spark_pb2.Plan) -> algebra_pb2.Rel:
+        """Register the temporary dataframe."""
         dataframe_view_name = rel.command.create_dataframe_view.name
         read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
         format = read_data_source_relation.format

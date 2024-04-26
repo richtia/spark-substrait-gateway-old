@@ -105,7 +105,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                         substrait = convert_sql(request.plan.command.sql_command.sql, self._backend_with_tempview)
                     case 'create_dataframe_view':
                         convert = SparkSubstraitConverter(self._options)
-                        self._backend_with_tempview = convert.convert_create_dataframe_view(request.plan)
+                        self._backend_with_tempview = convert.create_dataframe_view(request.plan)
                         return
                     case _:
                         type = request.plan.command.WhichOneof("command_type")
