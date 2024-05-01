@@ -43,9 +43,7 @@ class DatafusionBackend(Backend):
 
         try:
             plan_data = plan.SerializeToString()
-            substrait_plan = datafusion.substrait.substrait.serde.deserialize_bytes(
-                plan_data
-            )
+            substrait_plan = datafusion.substrait.substrait.serde.deserialize_bytes(plan_data)
             logical_plan = datafusion.substrait.substrait.consumer.from_substrait_plan(
                 self._connection, substrait_plan
             )
@@ -63,7 +61,7 @@ class DatafusionBackend(Backend):
                 self._connection.deregister_table(table_name)
 
     def register_table(
-        self, name: str, path: Path, file_format: str = "parquet", mode: str = "create"
+        self, name: str, path: Path, file_format: str = 'parquet', mode: str = 'create'
     ) -> None:
         """Register the given table with the backend."""
         files = Backend.expand_location(path)
