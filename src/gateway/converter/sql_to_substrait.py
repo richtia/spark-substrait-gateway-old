@@ -11,7 +11,7 @@ def convert_sql(sql: str, backend=None) -> plan_pb2.Plan:
 
     # If backend is not provided or is not a DuckDBBackend, set one up.
     # DuckDB is used as the SQL conversion engine.
-    if not backend and not isinstance(backend, backend_selector.DuckDBBackend):
+    if not isinstance(backend, backend_selector.DuckDBBackend):
         backend = backend_selector.find_backend(BackendOptions(Backend.DUCKDB, False))
         backend.register_tpch()
 
