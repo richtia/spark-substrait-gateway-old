@@ -123,8 +123,11 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
-                        substrait = convert_sql(request.plan.command.sql_command.sql,
-                                                self._backend_with_tempview)
+                        if self._tempview_session_id == request.session_id:
+                            substrait = convert_sql(request.plan.command.sql_command.sql,
+                                                    self._backend_with_tempview)
+                        else:
+                            substrait = convert_sql(request.plan.command.sql_command.sql)
                     case 'create_dataframe_view':
                         if not self._convert and self._tempview_session_id != request.session_id:
                             self._convert = SparkSubstraitConverter(self._options)
