@@ -11,10 +11,13 @@ import pyspark.sql.connect.proto.base_pb2 as pb2
 import pyspark.sql.connect.proto.base_pb2_grpc as pb2_grpc
 from pyspark.sql.connect.proto import types_pb2
 
+from gateway.backends.backend_options import BackendOptions
 from gateway.backends.backend_selector import find_backend
 from gateway.converter.conversion_options import arrow, datafusion, duck_db
 from gateway.converter.spark_to_substrait import SparkSubstraitConverter
 from gateway.converter.sql_to_substrait import convert_sql
+
+from substrait.gen.proto import algebra_pb2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,6 +82,20 @@ def convert_pyarrow_schema_to_spark(schema: pa.Schema) -> types_pb2.DataType:
     return types_pb2.DataType(struct=types_pb2.DataType.Struct(fields=fields))
 
 
+def create_dataframe_view(rel: pb2.Plan, converstion_options) -> algebra_pb2.Rel:
+    """Register the temporary dataframe."""
+    dataframe_view_name = rel.command.create_dataframe_view.name
+    read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
+    format = read_data_source_relation.format
+    path = read_data_source_relation.paths[0]
+    mode = "replace" if rel.command.create_dataframe_view.replace else "create"
+
+    backend = find_backend(BackendOptions(converstion_options.backend.backend, False))
+    backend.register_table(dataframe_view_name, path, format, mode)
+
+    return backend
+
+
 # pylint: disable=E1101,fixme
 class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
     """Provides the SparkConnect service."""
@@ -102,6 +119,8 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                 if not self._convert and self._tempview_session_id != request.session_id:
                     self._convert = SparkSubstraitConverter(self._options)
                 substrait = self._convert.convert_plan(request.plan)
+                # convert = SparkSubstraitConverter(self._options)
+                # substrait = convert.convert_plan(request.plan)
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
@@ -112,8 +131,9 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                             self._convert = SparkSubstraitConverter(self._options)
                         if self._tempview_session_id != request.session_id:
                             self._tempview_session_id = request.session_id
-                        self._backend_with_tempview = self._convert.create_dataframe_view(
-                            request.plan, self._tempview_session_id)
+                        self._backend_with_tempview = create_dataframe_view(
+                            request.plan, self._options)
+                        self._convert.set_tempview_backend(self._backend_with_tempview)
 
                         return
                     case _:

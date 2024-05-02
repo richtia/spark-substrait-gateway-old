@@ -63,7 +63,10 @@ class SparkSubstraitConverter:
         self._saved_extension_uris = {}
         self._saved_extensions = {}
         self._backend_with_tempview = None
-        self._tempview_session_id = None
+
+    def set_tempview_backend(self, backend) -> None:
+        """Save the backend being used to create the temporary dataframe."""
+        self._backend_with_tempview = backend
 
     def lookup_function_by_name(self, name: str) -> ExtensionFunction:
         """Find the function reference for a given Spark function name."""
@@ -1141,18 +1144,3 @@ class SparkSubstraitConverter:
         result.extension_uris.extend(self._saved_extension_uris)
         result.extensions.extend(self._saved_extensions)
         return result
-
-    def create_dataframe_view(self, rel: spark_pb2.Plan, session_id: str) -> algebra_pb2.Rel:
-        """Register the temporary dataframe."""
-        dataframe_view_name = rel.command.create_dataframe_view.name
-        read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
-        format = read_data_source_relation.format
-        path = read_data_source_relation.paths[0]
-        mode = "replace" if rel.command.create_dataframe_view.replace else "create"
-
-        backend = find_backend(BackendOptions(self._conversion_options.backend.backend, False))
-        backend.register_table(dataframe_view_name, path, format, mode)
-        self._backend_with_tempview = backend
-        self._tempview_session_id = session_id
-
-        return backend
