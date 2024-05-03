@@ -69,4 +69,4 @@ class DatafusionBackend(Backend):
             raise ValueError(f"No parquet files found at {location}")
         if self._connection.table_exist(name):
             self._connection.deregister_table(name)
-        self._connection.register_parquet(name, str(location))
+        self._connection.register_parquet(name, files[0])
