@@ -81,16 +81,15 @@ def convert_pyarrow_schema_to_spark(schema: pa.Schema) -> types_pb2.DataType:
     return types_pb2.DataType(struct=types_pb2.DataType.Struct(fields=fields))
 
 
-def create_dataframe_view(rel: pb2.Plan, converstion_options) -> algebra_pb2.Rel:
+def create_dataframe_view(rel: pb2.Plan, conversion_options) -> algebra_pb2.Rel:
     """Register the temporary dataframe."""
     dataframe_view_name = rel.command.create_dataframe_view.name
     read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
     format = read_data_source_relation.format
     path = read_data_source_relation.paths[0]
-    mode = "replace" if rel.command.create_dataframe_view.replace else "create"
 
-    backend = find_backend(BackendOptions(converstion_options.backend.backend, False))
-    backend.register_table(dataframe_view_name, path, format, mode)
+    backend = find_backend(BackendOptions(conversion_options.backend.backend, False))
+    backend.register_table(dataframe_view_name, path, format)
 
     return backend
 
@@ -106,7 +105,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         self._options = duck_db()
         self._backend_with_tempview = None
         self._tempview_session_id = None
-        self._convert = None
+        self._converter = None
 
     def ExecutePlan(
             self, request: pb2.ExecutePlanRequest, context: grpc.RpcContext) -> Generator[
@@ -115,9 +114,9 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         _LOGGER.info('ExecutePlan: %s', request)
         match request.plan.WhichOneof('op_type'):
             case 'root':
-                if not self._convert and self._tempview_session_id != request.session_id:
-                    self._convert = SparkSubstraitConverter(self._options)
-                substrait = self._convert.convert_plan(request.plan)
+                if not self._converter and self._tempview_session_id != request.session_id:
+                    self._converter = SparkSubstraitConverter(self._options)
+                substrait = self._converter.convert_plan(request.plan)
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
@@ -128,13 +127,13 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                         else:
                             substrait = convert_sql(request.plan.command.sql_command.sql)
                     case 'create_dataframe_view':
-                        if not self._convert and self._tempview_session_id != request.session_id:
-                            self._convert = SparkSubstraitConverter(self._options)
+                        if not self._converter and self._tempview_session_id != request.session_id:
+                            self._converter = SparkSubstraitConverter(self._options)
                         if self._tempview_session_id != request.session_id:
                             self._tempview_session_id = request.session_id
                         self._backend_with_tempview = create_dataframe_view(
                             request.plan, self._options)
-                        self._convert.set_tempview_backend(self._backend_with_tempview)
+                        self._converter.set_tempview_backend(self._backend_with_tempview)
 
                         return
                     case _:
@@ -187,9 +186,9 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         """Analyze the given plan and return the results."""
         _LOGGER.info('AnalyzePlan: %s', request)
         if request.schema:
-            if not self._convert:
-                self._convert = SparkSubstraitConverter(self._options)
-            substrait = self._convert.convert_plan(request.schema.plan)
+            if not self._converter:
+                self._converter = SparkSubstraitConverter(self._options)
+            substrait = self._converter.convert_plan(request.schema.plan)
             if self._backend_with_tempview and self._tempview_session_id == request.session_id:
                 backend = self._backend_with_tempview
             else:

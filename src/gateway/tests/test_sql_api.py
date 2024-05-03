@@ -68,11 +68,11 @@ class TestSqlAPI:
 
     def test_limit(self, spark_session_with_tpch_dataset):
         expected = [
-            Row(c_custkey=2, c_phone='23-768-687-3665', c_mktsegment='AUTOMOBILE'),
-            Row(c_custkey=3, c_phone='11-719-748-3364', c_mktsegment='AUTOMOBILE'),
-            Row(c_custkey=4, c_phone='14-128-190-5944', c_mktsegment='MACHINERY'),
-            Row(c_custkey=5, c_phone='13-750-942-6364', c_mktsegment='HOUSEHOLD'),
-            Row(c_custkey=6, c_phone='30-114-968-4951', c_mktsegment='AUTOMOBILE'),
+            Row(c_custkey=131074, c_phone='20-431-513-7803', c_mktsegment='AUTOMOBILE'),
+            Row(c_custkey=131075, c_phone='31-589-697-1004', c_mktsegment='HOUSEHOLD'),
+            Row(c_custkey=131076, c_phone='17-829-175-3577', c_mktsegment='AUTOMOBILE'),
+            Row(c_custkey=131077, c_phone='31-306-822-6114', c_mktsegment='HOUSEHOLD'),
+            Row(c_custkey=131078, c_phone='22-818-651-4724', c_mktsegment='FURNITURE')
         ]
         outcome = spark_session_with_tpch_dataset.sql(
             'SELECT c_custkey, c_phone, c_mktsegment FROM customer LIMIT 5').collect()

@@ -48,8 +48,7 @@ class DuckDBBackend(Backend):
         self,
         table_name: str,
         location: Path,
-        file_format: str = "parquet",
-        mode: str = "create",
+        file_format: str = "parquet"
     ) -> None:
         """Register the given table with the backend."""
         files = Backend.expand_location(location)

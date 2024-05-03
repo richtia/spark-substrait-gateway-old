@@ -61,8 +61,12 @@ class DatafusionBackend(Backend):
                 self._connection.deregister_table(table_name)
 
     def register_table(
-        self, name: str, path: Path, file_format: str = 'parquet', mode: str = 'create'
+        self, name: str, location: Path, file_format: str = 'parquet'
     ) -> None:
         """Register the given table with the backend."""
-        files = Backend.expand_location(path)
-        self._connection.register_parquet(name, files[0])
+        files = Backend.expand_location(location)
+        if not files:
+            raise ValueError(f"No parquet files found at {location}")
+        if self._connection.table_exist(name):
+            self._connection.deregister_table(name)
+        self._connection.register_parquet(name, str(location))
