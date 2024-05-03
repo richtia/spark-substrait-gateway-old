@@ -121,7 +121,8 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
-                        if self._backend_with_tempview and self._tempview_session_id == request.session_id:
+                        if (self._backend_with_tempview and
+                                self._tempview_session_id == request.session_id):
                             substrait = convert_sql(request.plan.command.sql_command.sql,
                                                     self._backend_with_tempview)
                         else:
