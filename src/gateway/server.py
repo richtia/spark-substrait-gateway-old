@@ -88,7 +88,7 @@ def create_dataframe_view(rel: pb2.Plan, conversion_options) -> algebra_pb2.Rel:
     format = read_data_source_relation.format
     path = read_data_source_relation.paths[0]
 
-    backend = find_backend(BackendOptions(conversion_options.backend.backend, False))
+    backend = find_backend(BackendOptions(conversion_options.backend.backend, True))
     backend.register_table(dataframe_view_name, path, format)
 
     return backend

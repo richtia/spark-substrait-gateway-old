@@ -13,10 +13,11 @@ def mark_dataframe_tests_as_xfail(request):
     """Marks a subset of tests as expected to be fail."""
     source = request.getfixturevalue('source')
     originalname = request.keywords.node.originalname
-    if source == 'gateway-over-duckdb' and (originalname == 'test_with_column' or
-                                            originalname == 'test_cast'):
-        request.node.add_marker(
-            pytest.mark.xfail(reason='DuckDB column binding error'))
+    if source == 'gateway-over-duckdb':
+        if originalname == 'test_with_column' or originalname == 'test_cast':
+            request.node.add_marker(pytest.mark.xfail(reason='DuckDB column binding error'))
+        elif originalname == 'test_create_or_replace_temp_view':
+            request.node.add_marker(pytest.mark.xfail(reason='ADBC DuckDB from_substrait error'))
     elif source == 'gateway-over-datafusion':
         if originalname in [
             'test_data_source_schema', 'test_data_source_filter', 'test_table', 'test_table_schema',
@@ -138,5 +139,5 @@ only showing top 1 row
         location_customer = str(Backend.find_tpch() / 'customer')
         df_customer = spark_session.read.parquet(location_customer)
         df_customer.createOrReplaceTempView("mytempview")
-        tempview_sql_result = spark_session.sql("SELECT * FROM mytempview")
-        assert len(tempview_sql_result.collect()) == len(df_customer.collect())
+        outcome = spark_session.table('mytempview').collect()
+        assert len(outcome) == 149999

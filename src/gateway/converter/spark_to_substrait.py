@@ -454,9 +454,12 @@ class SparkSubstraitConverter:
         """Convert a read named table relation to a Substrait relation."""
         table_name = rel.unparsed_identifier
 
-        backend = find_backend(BackendOptions(self._conversion_options.backend.backend, True))
-        tpch_location = backend.find_tpch()
-        backend.register_table(table_name, tpch_location / table_name)
+        if self._backend_with_tempview:
+            backend = self._backend_with_tempview
+        else:
+            backend = find_backend(BackendOptions(self._conversion_options.backend.backend, True))
+            tpch_location = backend.find_tpch()
+            backend.register_table(table_name, tpch_location / table_name)
         arrow_schema = backend.describe_table(table_name)
         schema = self.convert_arrow_schema(arrow_schema)
 
