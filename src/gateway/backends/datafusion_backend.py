@@ -67,6 +67,8 @@ class DatafusionBackend(Backend):
         files = Backend.expand_location(location)
         if not files:
             raise ValueError(f"No parquet files found at {location}")
+        # TODO: Add options to skip table registration if it already exists instead
+        # of deregistering it.
         if self._connection.table_exist(name):
             self._connection.deregister_table(name)
         self._connection.register_parquet(name, files[0])

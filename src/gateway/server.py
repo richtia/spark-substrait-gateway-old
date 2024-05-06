@@ -130,10 +130,9 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                     case 'create_dataframe_view':
                         if not self._converter and self._tempview_session_id != request.session_id:
                             self._converter = SparkSubstraitConverter(self._options)
-                        if self._tempview_session_id != request.session_id:
-                            self._tempview_session_id = request.session_id
                         self._backend_with_tempview = create_dataframe_view(
                             request.plan, self._options, self._backend_with_tempview)
+                        self._tempview_session_id = request.session_id
                         self._converter.set_tempview_backend(self._backend_with_tempview)
 
                         return
