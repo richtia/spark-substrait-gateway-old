@@ -16,12 +16,14 @@ def mark_dataframe_tests_as_xfail(request):
     if source == 'gateway-over-duckdb':
         if originalname == 'test_with_column' or originalname == 'test_cast':
             request.node.add_marker(pytest.mark.xfail(reason='DuckDB column binding error'))
-        elif originalname == 'test_create_or_replace_temp_view':
+        elif originalname in [
+            'test_create_or_replace_temp_view', 'test_create_or_replace_multiple_temp_views']:
             request.node.add_marker(pytest.mark.xfail(reason='ADBC DuckDB from_substrait error'))
     elif source == 'gateway-over-datafusion':
         if originalname in [
             'test_data_source_schema', 'test_data_source_filter', 'test_table', 'test_table_schema',
-            'test_table_filter', 'test_create_or_replace_temp_view']:
+            'test_table_filter', 'test_create_or_replace_temp_view',
+            'test_create_or_replace_multiple_temp_views',]:
             request.node.add_marker(pytest.mark.xfail(reason='Gateway internal iterating error'))
         else:
             pytest.importorskip("datafusion.substrait")
@@ -141,3 +143,12 @@ only showing top 1 row
         df_customer.createOrReplaceTempView("mytempview")
         outcome = spark_session.table('mytempview').collect()
         assert len(outcome) == 149999
+
+    def test_create_or_replace_multiple_temp_views(self, spark_session):
+        location_customer = str(Backend.find_tpch() / 'customer')
+        df_customer = spark_session.read.parquet(location_customer)
+        df_customer.createOrReplaceTempView("mytempview1")
+        df_customer.createOrReplaceTempView("mytempview2")
+        outcome1 = spark_session.table('mytempview1').collect()
+        outcome2 = spark_session.table('mytempview2').collect()
+        assert len(outcome1) == len(outcome2) == 149999
