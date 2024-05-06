@@ -81,14 +81,15 @@ def convert_pyarrow_schema_to_spark(schema: pa.Schema) -> types_pb2.DataType:
     return types_pb2.DataType(struct=types_pb2.DataType.Struct(fields=fields))
 
 
-def create_dataframe_view(rel: pb2.Plan, conversion_options) -> algebra_pb2.Rel:
+def create_dataframe_view(rel: pb2.Plan, conversion_options, backend) -> algebra_pb2.Rel:
     """Register the temporary dataframe."""
     dataframe_view_name = rel.command.create_dataframe_view.name
     read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
     format = read_data_source_relation.format
     path = read_data_source_relation.paths[0]
 
-    backend = find_backend(BackendOptions(conversion_options.backend.backend, True))
+    if not backend:
+        backend = find_backend(BackendOptions(conversion_options.backend.backend, False))
     backend.register_table(dataframe_view_name, path, format)
 
     return backend
@@ -132,7 +133,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
                         if self._tempview_session_id != request.session_id:
                             self._tempview_session_id = request.session_id
                         self._backend_with_tempview = create_dataframe_view(
-                            request.plan, self._options)
+                            request.plan, self._options, self._backend_with_tempview)
                         self._converter.set_tempview_backend(self._backend_with_tempview)
 
                         return
