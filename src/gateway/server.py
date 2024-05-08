@@ -145,8 +145,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         """Initialize the SparkConnect service."""
         # This is the central point for configuring the behavior of the service.
         self._options = duck_db()
-        self._backend_with_tempview = None
-        self._tempview_session_id = None
+        self._backend = None
         self._converter = None
         self._statistics = Statistics()
 
@@ -165,7 +164,7 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         self._InitializeExecution()
         if not self._converter:
             self._converter = SparkSubstraitConverter(self._options)
-            self._converter.set_tempview_backend(self._backend_with_tempview)
+            self._converter.set_backend(self._backend)
         match request.plan.WhichOneof('op_type'):
             case 'root':
                 substrait = self._converter.convert_plan(request.plan)
@@ -237,13 +236,13 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         if request.schema:
             if not self._converter:
                 self._converter = SparkSubstraitConverter(self._options)
-                self._converter.set_tempview_backend(self._backend_with_tempview)
+                self._converter.set_backend(self._backend)
             substrait = self._converter.convert_plan(request.schema.plan)
             # TODO: Register the TPCH data for datafusion through the fixture.
-            if isinstance(self._backend_with_tempview, backend_selector.DatafusionBackend):
-                self._backend_with_tempview.register_tpch()
+            if isinstance(self._backend, backend_selector.DatafusionBackend):
+                self._backend.register_tpch()
             self._statistics.add_plan(substrait)
-            results = self._backend_with_tempview.execute(substrait)
+            results = self._backend.execute(substrait)
             _LOGGER.debug('  results are: %s', results)
             return pb2.AnalyzePlanResponse(
                 session_id=request.session_id,
