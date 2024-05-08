@@ -13,6 +13,7 @@ from google.protobuf.json_format import MessageToJson
 from pyspark.sql.connect.proto import types_pb2
 from substrait.gen.proto import algebra_pb2, plan_pb2
 
+from gateway.backends import backend_selector
 from gateway.backends.backend_options import BackendOptions
 from gateway.backends.backend_selector import find_backend
 from gateway.converter.conversion_options import arrow, datafusion, duck_db
@@ -149,6 +150,11 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         self._converter = None
         self._statistics = Statistics()
 
+    def _InitializeExecution(self):
+        """Initialize the execution of the Plan by setting the backend."""
+        if not self._backend:
+            self._backend = find_backend(self._options.backend)
+
     def ExecutePlan(
             self, request: pb2.ExecutePlanRequest, context: grpc.RpcContext) -> Generator[
         pb2.ExecutePlanResponse, None, None]:
@@ -156,28 +162,26 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         self._statistics.execute_requests += 1
         self._statistics.add_request(request)
         _LOGGER.info('ExecutePlan: %s', request)
+        self._InitializeExecution()
+        if not self._converter:
+            self._converter = SparkSubstraitConverter(self._options)
+            self._converter.set_tempview_backend(self._backend_with_tempview)
         match request.plan.WhichOneof('op_type'):
             case 'root':
-                if not self._converter and self._tempview_session_id != request.session_id:
-                    self._converter = SparkSubstraitConverter(self._options)
                 substrait = self._converter.convert_plan(request.plan)
             case 'command':
                 match request.plan.command.WhichOneof('command_type'):
                     case 'sql_command':
-                        if (self._backend_with_tempview and
-                                self._tempview_session_id == request.session_id):
-                            substrait = convert_sql(request.plan.command.sql_command.sql,
-                                                    self._backend_with_tempview)
-                        else:
-                            substrait = convert_sql(request.plan.command.sql_command.sql)
+                        if "CREATE" in request.plan.command.sql_command.sql:
+                            connection = self._backend.get_connection()
+                            connection.execute(request.plan.command.sql_command.sql)
+                            return
+                        substrait = convert_sql(request.plan.command.sql_command.sql)
                     case 'create_dataframe_view':
-                        if not self._converter and self._tempview_session_id != request.session_id:
-                            self._converter = SparkSubstraitConverter(self._options)
-                        self._backend_with_tempview = create_dataframe_view(
-                            request.plan, self._options, self._backend_with_tempview)
-                        self._tempview_session_id = request.session_id
-                        self._converter.set_tempview_backend(self._backend_with_tempview)
-
+                        create_dataframe_view(request.plan, self._backend)
+                        yield pb2.ExecutePlanResponse(
+                            session_id=request.session_id,
+                            result_complete=pb2.ExecutePlanResponse.ResultComplete())
                         return
                     case _:
                         type = request.plan.command.WhichOneof("command_type")
@@ -185,13 +189,11 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
             case _:
                 raise ValueError(f'Unknown plan type: {request.plan}')
         _LOGGER.debug('  as Substrait: %s', substrait)
-        if self._backend_with_tempview and self._tempview_session_id == request.session_id:
-            backend = self._backend_with_tempview
-        else:
-            backend = find_backend(self._options.backend)
-            backend.register_tpch()
+        # TODO: Register the TPCH data for datafusion through the fixture.
+        if isinstance(self._backend, backend_selector.DatafusionBackend):
+            self._backend.register_tpch()
         self._statistics.add_plan(substrait)
-        results = backend.execute(substrait)
+        results = self._backend.execute(substrait)
         _LOGGER.debug('  results are: %s', results)
 
         if not self._options.implement_show_string and request.plan.WhichOneof(
@@ -231,17 +233,17 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         self._statistics.analyze_requests += 1
         self._statistics.add_request(request)
         _LOGGER.info('AnalyzePlan: %s', request)
+        self._InitializeExecution()
         if request.schema:
             if not self._converter:
                 self._converter = SparkSubstraitConverter(self._options)
+                self._converter.set_tempview_backend(self._backend_with_tempview)
             substrait = self._converter.convert_plan(request.schema.plan)
-            if self._backend_with_tempview and self._tempview_session_id == request.session_id:
-                backend = self._backend_with_tempview
-            else:
-                backend = find_backend(self._options.backend)
-                backend.register_tpch()
+            # TODO: Register the TPCH data for datafusion through the fixture.
+            if isinstance(self._backend_with_tempview, backend_selector.DatafusionBackend):
+                self._backend_with_tempview.register_tpch()
             self._statistics.add_plan(substrait)
-            results = backend.execute(substrait)
+            results = self._backend_with_tempview.execute(substrait)
             _LOGGER.debug('  results are: %s', results)
             return pb2.AnalyzePlanResponse(
                 session_id=request.session_id,
