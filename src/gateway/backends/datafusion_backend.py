@@ -94,6 +94,6 @@ class DatafusionBackend(Backend):
         for index in range(len(result)):
             fields.append(pa.field(result[index]['column_name'],
                                    _DATAFUSION_TO_ARROW[result[index]['data_type']]))
-        schema = pa.schema(fields)
+        arrow_schema = pa.schema(fields)
 
-        return schema
+        return arrow_schema
