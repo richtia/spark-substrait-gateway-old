@@ -152,11 +152,6 @@ class SparkConnectService(pb2_grpc.SparkConnectServiceServicer):
         if not self._backend:
             self._backend = find_backend(self._options.backend)
 
-    def _InitializeExecution(self):
-        """Initialize the execution of the Plan by setting the backend."""
-        if not self._backend:
-            self._backend = find_backend(self._options.backend)
-
     def ExecutePlan(
             self, request: pb2.ExecutePlanRequest, context: grpc.RpcContext) -> Generator[
         pb2.ExecutePlanResponse, None, None]:
