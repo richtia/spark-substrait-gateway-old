@@ -91,7 +91,7 @@ def create_dataframe_view(rel: pb2.Plan, backend) -> algebra_pb2.Rel:
     path = read_data_source_relation.paths[0]
     backend.register_table(dataframe_view_name, path, format)
 
-    return
+    return None
 
 
 class Statistics:
