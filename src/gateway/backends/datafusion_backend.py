@@ -84,7 +84,7 @@ class DatafusionBackend(Backend):
         # of deregistering it.
         if self._connection.table_exist(name):
             self._connection.deregister_table(name)
-        self._connection.register_parquet(name, files[0])
+        self._connection.register_parquet(name, str(location))
 
     def describe_table(self, table_name: str):
         """Asks the backend to describe the given table."""

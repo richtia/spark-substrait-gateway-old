@@ -554,13 +554,9 @@ class SparkSubstraitConverter:
         local = algebra_pb2.ReadRel.LocalFiles()
         schema = self.convert_schema(rel.schema)
         if not schema:
-            backend = find_backend(BackendOptions(self._conversion_options.backend.backend, True))
-            try:
-                backend.register_table(TABLE_NAME, rel.paths[0], rel.format)
-                arrow_schema = backend.describe_table(TABLE_NAME)
-                schema = self.convert_arrow_schema(arrow_schema)
-            finally:
-                backend.drop_table(TABLE_NAME)
+            self._backend.register_table(TABLE_NAME, rel.paths[0], rel.format)
+            arrow_schema = self._backend.describe_table(TABLE_NAME)
+            schema = self.convert_arrow_schema(arrow_schema)
         symbol = self._symbol_table.get_symbol(self._current_plan_id)
         for field_name in schema.names:
             symbol.output_fields.append(field_name)
