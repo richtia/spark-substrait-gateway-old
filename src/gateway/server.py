@@ -83,18 +83,16 @@ def convert_pyarrow_schema_to_spark(schema: pa.Schema) -> types_pb2.DataType:
     return types_pb2.DataType(struct=types_pb2.DataType.Struct(fields=fields))
 
 
-def create_dataframe_view(rel: pb2.Plan, conversion_options, backend) -> algebra_pb2.Rel:
+def create_dataframe_view(rel: pb2.Plan, backend) -> algebra_pb2.Rel:
     """Register the temporary dataframe."""
     dataframe_view_name = rel.command.create_dataframe_view.name
     read_data_source_relation = rel.command.create_dataframe_view.input.read.data_source
     format = read_data_source_relation.format
     path = read_data_source_relation.paths[0]
-
-    if not backend:
-        backend = find_backend(BackendOptions(conversion_options.backend.backend, False))
     backend.register_table(dataframe_view_name, path, format)
 
-    return backend
+    return
+
 
 class Statistics:
     """Statistics about the requests made to the server."""
