@@ -10,6 +10,8 @@ import pyspark.sql.connect.proto.base_pb2 as spark_pb2
 import pyspark.sql.connect.proto.expressions_pb2 as spark_exprs_pb2
 import pyspark.sql.connect.proto.relations_pb2 as spark_relations_pb2
 import pyspark.sql.connect.proto.types_pb2 as spark_types_pb2
+from substrait.gen.proto import algebra_pb2, plan_pb2, type_pb2
+from substrait.gen.proto.extensions import extensions_pb2
 
 from gateway.converter.conversion_options import ConversionOptions
 from gateway.converter.spark_functions import ExtensionFunction, lookup_spark_function
@@ -41,8 +43,6 @@ from gateway.converter.substrait_builder import (
     strlen,
 )
 from gateway.converter.symbol_table import SymbolTable
-from substrait.gen.proto import algebra_pb2, plan_pb2, type_pb2
-from substrait.gen.proto.extensions import extensions_pb2
 
 TABLE_NAME = "my_table"
 
