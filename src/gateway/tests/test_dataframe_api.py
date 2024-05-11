@@ -9,6 +9,14 @@ from pyspark.sql.functions import col, substring
 from pyspark.testing import assertDataFrameEqual
 
 
+@pytest.fixture(autouse=True)
+def mark_dataframe_tests_as_xfail(request):
+    """Marks a subset of tests as expected to be fail."""
+    source = request.getfixturevalue('source')
+    if source == 'gateway-over-datafusion':
+        pytest.importorskip("datafusion.substrait")
+
+
 # pylint: disable=missing-function-docstring
 # ruff: noqa: E712
 class TestDataFrameAPI:
