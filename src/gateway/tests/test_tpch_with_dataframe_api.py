@@ -22,8 +22,6 @@ def mark_tests_as_xfail(request):
             request.node.add_marker(pytest.mark.xfail(reason='Incorrect calculation'))
         elif originalname in[ 'test_query_07', 'test_query_08', 'test_query_09']:
             request.node.add_marker(pytest.mark.xfail(reason='Substring argument mismatch'))
-        elif originalname in ['test_query_12']:
-            request.node.add_marker(pytest.mark.xfail(reason='Missing nullability information'))
         elif originalname in ['test_query_15']:
             request.node.add_marker(pytest.mark.xfail(reason='No results (float vs decimal)'))
         elif originalname in ['test_query_16', 'test_query_21']:
