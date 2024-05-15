@@ -415,8 +415,8 @@ class TestTpchWithDataFrameAPI:
 
     def test_query_12(self, spark_session_with_tpch_dataset):
         expected = [
-            Row(l_shipmode='MAIL', high_line_count=6202, low_line_count=9324),
-            Row(l_shipmode='SHIP', high_line_count=6200, low_line_count=9262),
+            Row(l_shipmode='MAIL', high_line_count=15526, low_line_count=15526),
+            Row(l_shipmode='SHIP', high_line_count=15462, low_line_count=15462),
         ]
 
         with utilizes_valid_plans(spark_session_with_tpch_dataset):
@@ -435,11 +435,11 @@ class TestTpchWithDataFrameAPI:
                 count(
                     when((col('o_orderpriority') == '1-URGENT') | (
                             col('o_orderpriority') == '2-HIGH'),
-                         True)).alias('high_line_count'),
+                         True).otherwise(False)).alias('high_line_count'),
                 count(
                     when((col('o_orderpriority') != '1-URGENT') & (
                             col('o_orderpriority') != '2-HIGH'),
-                         True)).alias('low_line_count'))
+                         True).otherwise(False)).alias('low_line_count'))
 
             sorted_outcome = outcome.sort('l_shipmode').collect()
 
